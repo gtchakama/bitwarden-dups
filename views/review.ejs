@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Duplicates</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Dark mode styles */
+        .dark body { background-color: #1e2124; }
+        .dark .bg-white { background-color: #2f3437; }
+        .dark .text-gray-800 { color: #e5e7eb; }
+        .dark .text-gray-600 { color: #9ca3af; }
+        .dark .text-gray-500 { color: #6b7280; }
+        .dark .text-gray-900 { color: #f3f4f6; }
+        .dark .bg-gray-50 { background-color: #282c2f; }
+        .dark .border-gray-200 { border-color: #374151; }
+        .dark .hover\:bg-gray-50:hover { background-color: #374151; }
+        .dark .bg-gray-100 { background-color: #2f3437; }
+        .dark .hover\:bg-gray-200:hover { background-color: #374151; }
+        .dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1); }
+        .dark .border-blue-500 { border-color: #3b82f6; }
+        .dark .text-blue-700 { color: #93c5fd; }
+        .dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.2); }
+        .dark .hover\:bg-blue-200:hover { background-color: rgba(59, 130, 246, 0.3); }
+        .dark .bg-emerald-500 { background-color: #10b981; }
+        .dark .hover\:bg-emerald-600:hover { background-color: #059669; }
+        .dark .bg-red-500 { background-color: #ef4444; }
+        .dark .hover\:bg-red-600:hover { background-color: #dc2626; }
+        .dark .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2); }
+        .dark .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3); }
+        .dark .hover\:shadow-md:hover { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2); }
+        .dark .divide-gray-200 > * + * { border-color: #374151; }
+        
+        /* Floating button styles */
+        .floating-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 50;
+            transform-origin: center;
+            transition: transform 0.2s;
+        }
+        .floating-button:hover {
+            transform: scale(1.05);
+        }
+
+        /* Table styles for dark mode */
+        .dark .table-header {
+            background-color: #2f3437;
+            border-color: #374151;
+        }
+        
+        /* Custom scrollbar for dark mode */
+        .dark ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #282c2f;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            background-color: #10b981;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+
+        .dark .toast {
+            background-color: #059669;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen transition-colors duration-200">
+    <!-- Sticky Header -->
+    <header class="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Review Duplicates</h1>
+                    <p class="text-gray-600 dark:text-gray-400 hidden md:block">Review and manage duplicate entries</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/" class="px-4 py-2 border text-green-500 border-green-500 rounded-lg dark:text-green-500 dark:border-green-500 hover:bg-green-500 hover:text-white transition-colors duration-200 dark:hover:bg-green-500 dark:hover:text-white flex items-center gap-2" >
+                        <i class="fas fa-upload"></i>
+                        <span class="hidden sm:inline">Upload New File</span>
+                    </a>
+                    <a href="/download" class="px-4 py-2 border text-green-500 border-green-500 rounded-lg dark:text-green-500 dark:border-green-500 hover:bg-green-500 hover:text-white transition-colors duration-200 dark:hover:bg-green-500 dark:hover:text-white flex items-center gap-2" >
+                        <i class="fas fa-download"></i>
+                        <span class="hidden sm:inline">Download Complete CSV (<%= records.length %> entries)</span>
+                    </a>
+                    <button id="removeSelected" 
+                            class="hidden px-4 py-2 border text-red-500 border-red-500 rounded-lg dark:text-red-500 dark:border-red-500 hover:bg-red-500 hover:text-white transition-colors duration-200 dark:hover:bg-red-500 dark:hover:text-white flex items-center gap-2">
+                        <i class="fas fa-trash-alt"></i>
+                        <span class="hidden sm:inline">Remove Selected</span>
+                        <span class="text-sm" id="selectedCount">(0)</span>
+                    </button>
+                    <button id="themeToggle" 
+                            class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+                        <i class="fas fa-sun text-yellow-500 dark:hidden"></i>
+                        <i class="fas fa-moon text-blue-300 hidden dark:inline"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content with padding for header -->
+    <div class="pt-20">
+        <!-- Buy Me a Coffee Button -->
+        <a href="https://www.buymeacoffee.com/gtchakama" 
+           target="_blank" 
+           class="floating-button group">
+            <div class="flex items-center gap-3 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-full shadow-lg transition-all duration-200">
+                <i class="fas fa-coffee text-xl"></i>
+                <span class="font-medium">Buy me a coffee</span>
+                <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full mt-1 px-3 py-1 bg-gray-900 text-white text-sm rounded whitespace-nowrap">
+                    Support this project ❤️
+                </div>
+            </div>
+        </a>
+
+        <div class="container mx-auto px-4 py-8">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
+                    <div>
+                        <p class="text-gray-600">Review and manage duplicate entries from your Bitwarden export</p>
+                    </div>
+                    <div class="w-full md:w-auto">
+                        <div class="relative">
+                            <input type="text" 
+                                   id="searchInput" 
+                                   placeholder="Search by Username or URI..." 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                   onkeyup="filterDuplicates()">
+                            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <% if (duplicates.length === 0) { %>
+                    <div class="text-center py-12">
+                        <div class="text-emerald-500 mb-4">
+                            <i class="fas fa-check-circle text-6xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-semibold text-gray-800">No duplicates found!</h2>
+                        <p class="text-gray-600 mt-2">Your CSV file is already clean.</p>
+                    </div>
+                <% } else { %>
+                    <div class="space-y-8">
+                        <div class="flex items-center justify-between bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-info-circle text-blue-500"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm text-blue-700">
+                                        <span id="selectionText">Found <%= duplicates.length %> groups of duplicate entries from <%= records.length %> total entries</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button id="keepFirstAll" 
+                                        class="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-blue-100 dark:hover:bg-blue-200">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span class="text-sm font-medium">Keep First, Remove Others</span>
+                                </button>
+                                <button id="toggleAllPasswords" 
+                                        class="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-blue-100 dark:hover:bg-blue-200">
+                                    <i class="fas fa-eye"></i>
+                                    <span class="text-sm font-medium">Show All Passwords</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <% duplicates.forEach((duplicate, groupIndex) => { %>
+                            <div class="border border-gray-200 rounded-xl p-6 bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <h3 class="font-semibold text-xl mb-4 text-gray-800">
+                                    <span class="bg-gray-100 rounded-full px-3 py-1 text-sm mr-2">#<%= groupIndex + 1 %></span>
+                                    Duplicate Group
+                                </h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full table-auto">
+                                        <thead>
+                                            <tr class="bg-gray-50 border-b border-gray-200">
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <input type="checkbox" 
+                                                           class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                           onclick="toggleGroupCheckboxes(<%= groupIndex %>)">
+                                                </th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URI</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <% duplicate.indices.forEach(index => { %>
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <input type="checkbox" 
+                                                               class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 group-<%= groupIndex %>"
+                                                               value="<%= index %>"
+                                                               onchange="updateSelectedCount()">
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        <%= records[index].login_uri %>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        <%= records[index].login_username %>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">
+                                                        <span class="password-text text-gray-900 dark:text-gray-100" data-password="<%= records[index].login_password %>">•••••••••••</span>
+                                                    </td>
+                                                </tr>
+                                            <% }); %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="alert">
+        <i class="fas fa-check-circle text-xl"></i>
+        <div>
+            <p class="font-medium">Duplicates removed successfully!</p>
+            <p class="text-sm">Download your complete CSV file with <%= records.length %> unique entries</p>
+        </div>
+        <a href="/download" class="ml-4 px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors duration-200 flex items-center gap-2">
+            <i class="fas fa-download mr-1"></i>
+            <span>Download All (<%= records.length %>)</span>
+        </a>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const html = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            // Check for saved theme preference or system preference
+            const savedTheme = localStorage.getItem('theme');
+            const systemDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (savedTheme === 'dark' || (!savedTheme && systemDarkMode)) {
+                html.classList.add('dark');
+            }
+
+            themeToggle.addEventListener('click', function() {
+                html.classList.toggle('dark');
+                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+            });
+
+            // Existing password toggle functionality
+            const toggleButton = document.getElementById('toggleAllPasswords');
+            let passwordsVisible = false;
+
+            if (toggleButton) {
+                toggleButton.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    const text = this.querySelector('span');
+                    const passwordElements = document.querySelectorAll('.password-text');
+
+                    passwordsVisible = !passwordsVisible;
+
+                    passwordElements.forEach(element => {
+                        if (passwordsVisible) {
+                            element.textContent = element.dataset.password;
+                        } else {
+                            element.textContent = '•••••••••••';
+                        }
+                    });
+
+                    // Update button appearance
+                    if (passwordsVisible) {
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                        text.textContent = 'Hide All Passwords';
+                        this.classList.remove('bg-blue-50', 'hover:bg-blue-100', 'dark:bg-blue-100', 'dark:hover:bg-blue-200');
+                        this.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                    } else {
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                        text.textContent = 'Show All Passwords';
+                        this.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                        this.classList.add('bg-blue-50', 'hover:bg-blue-100', 'dark:bg-blue-100', 'dark:hover:bg-blue-200', 'text-blue-700');
+                    }
+                });
+            }
+        });
+
+        function toggleGroupCheckboxes(groupIndex) {
+            const groupCheckboxes = document.querySelectorAll(`.group-${groupIndex}`);
+            const headerCheckbox = event.target;
+            groupCheckboxes.forEach(checkbox => {
+                checkbox.checked = headerCheckbox.checked;
+            });
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const selectedCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked:not([onclick])');
+            const count = selectedCheckboxes.length;
+            const removeButton = document.getElementById('removeSelected');
+            const countSpan = document.getElementById('selectedCount');
+            const selectionText = document.getElementById('selectionText');
+            const totalDuplicates = <%= duplicates.length %>;
+            const totalEntries = <%= records.length %>;
+            
+            if (count > 0) {
+                removeButton.classList.remove('hidden');
+                removeButton.classList.add('flex');
+                countSpan.textContent = `(${count})`;
+                selectionText.textContent = `Selected ${count} out of ${totalDuplicates} duplicate groups from ${totalEntries} total entries`;
+            } else {
+                removeButton.classList.add('hidden');
+                removeButton.classList.remove('flex');
+                selectionText.textContent = `Found ${totalDuplicates} groups of duplicate entries from ${totalEntries} total entries`;
+            }
+        }
+
+        async function removeSelected() {
+            const selectedCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked:not([onclick])');
+            const selectedIndices = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+            
+            if (selectedIndices.length === 0) return;
+
+            try {
+                const response = await fetch('/remove-duplicate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ indices: selectedIndices }),
+                });
+                
+                if (response.ok) {
+                    // Show success toast and wait a moment before reloading
+                    const toast = document.getElementById('toast');
+                    toast.classList.add('show');
+                    
+                    // Wait 1.5 seconds before reloading to allow users to see the toast
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alert('Error removing duplicates');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error removing duplicates');
+            }
+        }
+
+        // Add event listener for remove selected button
+        document.getElementById('removeSelected').addEventListener('click', removeSelected);
+
+        // Add event listener for keep first all button
+        document.getElementById('keepFirstAll').addEventListener('click', function() {
+            const duplicateGroups = document.querySelectorAll('.border.border-gray-200.rounded-xl');
+            duplicateGroups.forEach((group, groupIndex) => {
+                const groupCheckboxes = document.querySelectorAll(`.group-${groupIndex}`);
+                groupCheckboxes.forEach((checkbox, index) => {
+                    checkbox.checked = index > 0;
+                });
+            });
+            updateSelectedCount();
+        });
+
+        function filterDuplicates() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const duplicateGroups = document.querySelectorAll('.border.border-gray-200.rounded-xl');
+            
+            duplicateGroups.forEach(group => {
+                const uriCells = group.querySelectorAll('td:nth-child(2)');
+                const usernameCells = group.querySelectorAll('td:nth-child(3)');
+                let found = false;
+                
+                uriCells.forEach((cell, index) => {
+                    const uri = cell.textContent.toLowerCase();
+                    const username = usernameCells[index].textContent.toLowerCase();
+                    if (uri.includes(searchValue) || username.includes(searchValue)) {
+                        found = true;
+                    }
+                });
+                
+                group.style.display = found ? 'block' : 'none';
+            });
+        }
+    </script>
+</body>
+</html> 
