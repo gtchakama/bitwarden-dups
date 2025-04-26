@@ -54,3 +54,7 @@ The application expects CSV files in the Bitwarden export format with the follow
 ## Security Note
 
 This application runs locally on your machine and does not send any data to external servers. All processing is done in-memory for security. 
+
+## Link to the article
+
+[Bitwarden Duplicate Manager](https://blog.gtchakama.com/bitwarden-duplicate-manager)
